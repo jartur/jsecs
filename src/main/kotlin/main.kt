@@ -3,6 +3,7 @@ import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import kotlin.random.Random
+import kotlin.reflect.KClass
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
@@ -21,9 +22,9 @@ data class Cell(
 data class NextState(var alive: Double) : Component
 
 object RegisteredComponents {
-    val components: Map<JsClass<out Component>, () -> Component> = mapOf(
-        Cell::class.js to { Cell(0.0) },
-        NextState::class.js to { NextState(0.0) }
+    val components: Map<KClass<out Component>, () -> Component> = mapOf(
+        Cell::class to { Cell(0.0) },
+        NextState::class to { NextState(0.0) }
     )
 }
 
@@ -57,13 +58,19 @@ abstract class AbstractSystem : System {
     }
 }
 
-typealias Ents = MutableMap<JsClass<out Component>, MutableMap<Int, Component?>>
+abstract class ComponentSystem(private val requiredComponents: Set<KClass<out Component>>) : AbstractSystem() {
+    override fun shouldRun(entity: Int): Boolean {
+        return super.shouldRun(entity) && requiredComponents.all { world.component(entity, it) != null }
+    }
+}
+
+typealias Ents = MutableMap<KClass<out Component>, MutableMap<Int, Component?>>
 
 interface EndFrameOp {
     fun run(entities: MutableList<Int>, components: Ents)
 }
 
-data class CreateEntity(val id: Int, var cs: MutableMap<JsClass<out Component>, Component>) : EndFrameOp {
+data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, Component>) : EndFrameOp {
     override fun run(entities: MutableList<Int>, components: Ents) {
         entities.add(id)
         cs.forEach { c ->
@@ -107,7 +114,7 @@ class World {
         return id
     }
 
-    fun <T : Component> addComponent(e: Int, c: JsClass<T>): T {
+    fun <T : Component> addComponent(e: Int, c: KClass<T>): T {
         if (!components.containsKey(c)) {
             components.put(c, mutableMapOf())
         }
@@ -123,7 +130,7 @@ class World {
         return component
     }
 
-    fun <T : Component> deleteComponent(e: Int, c: JsClass<T>) {
+    fun <T : Component> deleteComponent(e: Int, c: KClass<T>) {
         if (!components.containsKey(c)) {
             throw IllegalStateException("Component type is wrong $c")
         }
@@ -137,19 +144,19 @@ class World {
         }
     }
 
-    inline fun <reified T : Component> component(e: Int): T? = components[T::class.js]?.get(e) as? T
+    fun <T : Component> component(e: Int, c: KClass<T>): T? = components[c]?.get(e)?.unsafeCast<T>()
 }
 
-class CellularAutomatonSystem : AbstractSystem() {
+class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
     override fun doProcessEntity(entity: Int) {
-        world.component<Cell>(entity)?.let { cell ->
-            world.addComponent(entity, NextState::class.js).apply { alive = cellAliveNextTurn(cell) }
+        world.component(entity, Cell::class)!!.let { cell ->
+            world.addComponent(entity, NextState::class).apply { alive = cellAliveNextTurn(cell) }
         }
     }
 
-    fun cellAliveNextTurn(cell: Cell): Double {
+    private fun cellAliveNextTurn(cell: Cell): Double {
         val aliveNeighbours = cell.neighbours.sumByDouble { id ->
-            world.component<Cell>(id)?.alive ?: 0.0
+            world.component(id, Cell::class)!!.alive
         }
         return when {
             aliveNeighbours < 2 -> cell.alive * 0.9
@@ -159,13 +166,13 @@ class CellularAutomatonSystem : AbstractSystem() {
     }
 }
 
-class NextStateApplySystem : AbstractSystem() {
+class NextStateApplySystem : ComponentSystem(setOf(NextState::class, Cell::class)) {
     override fun doProcessEntity(entity: Int) {
-        world.component<NextState>(entity)?.let { nextState ->
-            world.component<Cell>(entity)?.let { cell ->
+        world.component(entity, NextState::class)!!.let { nextState ->
+            world.component(entity, Cell::class)!!.let { cell ->
                 cell.alive = nextState.alive
             }
-            world.deleteComponent(entity, NextState::class.js)
+            world.deleteComponent(entity, NextState::class)
         }
     }
 }
@@ -183,7 +190,7 @@ class RenderSystem(
     }
 
     override fun doProcessEntity(entity: Int) {
-        val cell = world.component<Cell>(entity) ?: return
+        val cell = world.component(entity, Cell::class) ?: return
         ctx.fillStyle = "rgba(0, 0, 0, ${cell.alive.coerceIn(0.0, 1.0)})"
         ctx.scale(scale.toDouble(), scale.toDouble())
         ctx.fillRect(cell.x.toDouble(), cell.y.toDouble(), 1.0, 1.0)
@@ -205,7 +212,7 @@ fun main() {
     val matrix = Array(width) { IntArray(height) }
     for (i in (0 until (width * height))) {
         val e = world.createEntity()
-        val cell = world.addComponent(e, Cell::class.js)
+        val cell = world.addComponent(e, Cell::class)
         cell.alive = Random.nextDouble()
         val x = i % width
         val y = i / width
