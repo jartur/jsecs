@@ -2,6 +2,8 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.reflect.KClass
 import kotlin.time.ExperimentalTime
@@ -85,6 +87,7 @@ class World {
     private var entities: MutableList<Int> = mutableListOf()
     private var freeEntities = mutableListOf<Int>()
     private var pendingOps = mutableMapOf<Int, EndFrameOp>()
+    private var delayed = mutableListOf<() -> Unit>()
     private var maxId = 0
 
     fun registerSystem(system: System) {
@@ -93,15 +96,17 @@ class World {
     }
 
     fun tick() {
-        systems.forEach { system ->
-            if (system.enabled) {
-                system.before()
-                entities.forEach { i ->
+        systems.forEach { it.before() }
+        entities.forEach { i ->
+            systems.forEach { system ->
+                if (system.enabled) {
                     system.processEntity(i)
                 }
-                system.after()
             }
         }
+        systems.forEach { it.after() }
+        delayed.forEach { op -> op() }
+        delayed.clear()
         pendingOps.values.forEach { op ->
             op.run(entities, components)
         }
@@ -145,12 +150,23 @@ class World {
     }
 
     fun <T : Component> component(e: Int, c: KClass<T>): T? = components[c]?.get(e)?.unsafeCast<T>()
+
+    /**
+     * Use this to update components at the end of the frame.
+     * Do all the computations before calling this, otherwise
+     * there is no real reason to delay the update since it will depend
+     * on potentially updated values of the other components anyway.
+     */
+    fun update(op: () -> Unit) {
+        delayed.add(op)
+    }
 }
 
 class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
     override fun doProcessEntity(entity: Int) {
         world.component(entity, Cell::class)!!.let { cell ->
-            world.addComponent(entity, NextState::class).apply { alive = cellAliveNextTurn(cell) }
+            val updated = cellAliveNextTurn(cell)
+            world.update { cell.alive = updated }
         }
     }
 
@@ -158,20 +174,7 @@ class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
         val aliveNeighbours = cell.neighbours.sumByDouble { id ->
             world.component(id, Cell::class)!!.alive
         }
-        return when {
-            aliveNeighbours < 2 -> cell.alive * 0.9
-            aliveNeighbours < 4 -> cell.alive * 1.1
-            else -> cell.alive * 0.7
-        }
-    }
-}
-
-class NextStateApplySystem : ComponentSystem(setOf(NextState::class, Cell::class)) {
-    override fun doProcessEntity(entity: Int) {
-        world.component(entity, NextState::class)!!.let { nextState ->
-            world.component(entity, Cell::class)!!.alive = nextState.alive
-            world.deleteComponent(entity, NextState::class)
-        }
+        return sin(aliveNeighbours)
     }
 }
 
@@ -199,19 +202,22 @@ class RenderSystem(
 val world = World()
 
 fun main() {
-    val scale = 2
-    val width = 200
-    val height = 200
+    val scale = 3
+    val width = 150
+    val height = 150
     cvs.width = width * scale
     cvs.height = height * scale
     world.registerSystem(CellularAutomatonSystem())
-    world.registerSystem(NextStateApplySystem())
     world.registerSystem(RenderSystem(cvs.width, cvs.height, ctx, scale))
     val matrix = Array(width) { IntArray(height) }
+    init(width, height, matrix) { i -> Random.nextDouble() }
+}
+
+private fun init(width: Int, height: Int, matrix: Array<IntArray>, initValue: (Int) -> Double) {
     for (i in (0 until (width * height))) {
         val e = world.createEntity()
         val cell = world.addComponent(e, Cell::class)
-        cell.alive = Random.nextDouble()
+        cell.alive = initValue(i)
         val x = i % width
         val y = i / width
         cell.x = x
