@@ -64,14 +64,14 @@ abstract class ComponentSystem(private val requiredComponents: Set<KClass<out Co
     }
 }
 
-typealias Ents = MutableMap<KClass<out Component>, MutableMap<Int, Component?>>
+typealias EntityByComponentType = MutableMap<KClass<out Component>, MutableMap<Int, Component?>>
 
 interface EndFrameOp {
-    fun run(entities: MutableList<Int>, components: Ents)
+    fun run(entities: MutableList<Int>, components: EntityByComponentType)
 }
 
 data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, Component>) : EndFrameOp {
-    override fun run(entities: MutableList<Int>, components: Ents) {
+    override fun run(entities: MutableList<Int>, components: EntityByComponentType) {
         entities.add(id)
         cs.forEach { c ->
             components[c.key]!![id] = c.value
@@ -80,9 +80,9 @@ data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, C
 }
 
 class World {
-    var components: Ents = mutableMapOf()
-    var systems = mutableListOf<System>()
-    var entities: MutableList<Int> = mutableListOf()
+    private var components: EntityByComponentType = mutableMapOf()
+    private var systems = mutableListOf<System>()
+    private var entities: MutableList<Int> = mutableListOf()
     private var freeEntities = mutableListOf<Int>()
     private var pendingOps = mutableMapOf<Int, EndFrameOp>()
     private var maxId = 0
@@ -116,7 +116,7 @@ class World {
 
     fun <T : Component> addComponent(e: Int, c: KClass<T>): T {
         if (!components.containsKey(c)) {
-            components.put(c, mutableMapOf())
+            components[c] = mutableMapOf()
         }
         val component = RegisteredComponents.components[c]!!().unsafeCast<T>()
         if (pendingOps.containsKey(e)) {
@@ -169,19 +169,17 @@ class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
 class NextStateApplySystem : ComponentSystem(setOf(NextState::class, Cell::class)) {
     override fun doProcessEntity(entity: Int) {
         world.component(entity, NextState::class)!!.let { nextState ->
-            world.component(entity, Cell::class)!!.let { cell ->
-                cell.alive = nextState.alive
-            }
+            world.component(entity, Cell::class)!!.alive = nextState.alive
             world.deleteComponent(entity, NextState::class)
         }
     }
 }
 
 class RenderSystem(
-    val width: Int,
-    val height: Int,
-    val ctx: CanvasRenderingContext2D,
-    val scale: Int = 1
+    private val width: Int,
+    private val height: Int,
+    private val ctx: CanvasRenderingContext2D,
+    private val scale: Int = 1
 ) : AbstractSystem() {
 
     override fun before() {
@@ -232,6 +230,7 @@ fun main() {
     }
 }
 
+@Suppress("unused")
 @ExperimentalTime
 fun run() {
     window.setInterval({
