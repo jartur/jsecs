@@ -13,7 +13,7 @@ class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
     override fun doProcessEntity(entity: Int) {
         world.component(entity, Cell::class)!!.let { cell ->
             val updated = cellAliveNextTurn(cell)
-            world.update { cell.alive = updated }
+            world.delay { cell.alive = updated }
         }
     }
 

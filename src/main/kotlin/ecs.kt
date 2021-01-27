@@ -170,8 +170,11 @@ class World(val registeredComponents: RegisteredComponents) {
      * Do all the computations before calling this, otherwise
      * there is no real reason to delay the update since it will depend
      * on potentially updated values of the other components anyway.
+     *
+     * Be careful not to capture dependencies (rvalues) that can change by the time
+     * this is actually evaluated.
      */
-    fun update(op: () -> Unit) {
+    fun delay(op: () -> Unit) {
         delayed.add(op)
     }
 }

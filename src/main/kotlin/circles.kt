@@ -11,15 +11,22 @@ class MovingSystem(
     private val height: Double
 ) : Component3System<Position, Velocity, Circle>(Position::class, Velocity::class, Circle::class) {
     override fun doProcessEntity(position: Position, velocity: Velocity, circle: Circle) {
-        position.v.add(velocity.v)
-        if ((position.v.x - circle.radius < 0 && velocity.v.x < 0) ||
-            (position.v.x + circle.radius > width && velocity.v.x > 0)) {
+        if ((position.v.x - circle.radius <= 0 && velocity.v.x < 0) ||
+            (position.v.x + circle.radius >= width && velocity.v.x > 0)
+        ) {
             velocity.v.x *= -1
+            if (position.v.x - circle.radius < 0) position.v.x = circle.radius
+            else position.v.x = width - circle.radius
         }
-        if ((position.v.y - circle.radius < 0 && velocity.v.y < 0) ||
-            (position.v.y + circle.radius > height && velocity.v.y > 0)) {
+        if ((position.v.y - circle.radius <= 0 && velocity.v.y < 0) ||
+            (position.v.y + circle.radius >= height && velocity.v.y > 0)
+        ) {
             velocity.v.y *= -1
+            if (position.v.y - circle.radius < 0) position.v.y = circle.radius
+            else position.v.y = height - circle.radius
         }
+        val vel = velocity.v.copy()
+        world.delay { position.v.add(vel) }
     }
 }
 
