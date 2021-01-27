@@ -1,5 +1,7 @@
 import org.w3c.dom.CanvasRenderingContext2D
 import kotlin.math.PI
+import kotlin.math.sqrt
+import kotlin.random.Random
 import kotlin.reflect.KClass
 
 data class Circle(var radius: Double) : Component
@@ -12,19 +14,36 @@ class MovingSystem(
 ) : Component3System<Position, Velocity, Circle>(Position::class, Velocity::class, Circle::class) {
     override fun doProcessEntity(position: Position, velocity: Velocity, circle: Circle) {
         val nextPosition = position.v.copy().add(velocity.v)
+        var collision = false
         if ((nextPosition.x - circle.radius <= 0 && velocity.v.x < 0) ||
             (nextPosition.x + circle.radius >= width && velocity.v.x > 0)
         ) {
             if (nextPosition.x - circle.radius < 0) nextPosition.x = circle.radius + 1
-            else  nextPosition.x = width - circle.radius - 1
-            velocity.v.x *= -1
+            else nextPosition.x = width - circle.radius - 1
+            velocity.v.x *= -0.9
+            collision = true
         }
         if ((nextPosition.y - circle.radius <= 0 && velocity.v.y < 0) ||
             (nextPosition.y + circle.radius >= height && velocity.v.y > 0)
         ) {
             if (nextPosition.y - circle.radius < 0) nextPosition.y = circle.radius + 1
             else nextPosition.y = height - circle.radius - 1
-            velocity.v.y *= -1
+            velocity.v.y *= -0.9
+            collision = true
+        }
+        if (collision && circle.radius > 5.0 && Random.nextDouble() < 0.1) {
+            val splitK = 0.8
+            val velK = 0.4
+            circle.radius *= splitK
+            val v1 = velocity.v.copy()
+            velocity.v.scale(velK)
+            world.createCircle(
+                nextPosition,
+                circle.radius * (1 - splitK),
+                Vector.one()
+                    .scale(sqrt(v1.lengthSq() * (1 - splitK * velK * velK) / (1 - splitK)))
+                    .rot(Random.nextDouble(PI * 2))
+            )
         }
         // Delay the position update so that other circles see a static picture of the world
         // during a frame.
@@ -65,3 +84,13 @@ val circlesWorld = World(object : RegisteredComponents {
             Circle::class to { Circle(0.0) }
         )
 })
+
+fun World.createCircle(position: Vector, radius: Double, velocity: Vector) {
+    val e = createEntity()
+    val pos = addComponent(e, Position::class)
+    val circle = addComponent(e, Circle::class)
+    val vel = addComponent(e, Velocity::class)
+    pos.v.set(position)
+    circle.radius = radius
+    vel.v.set(velocity)
+}

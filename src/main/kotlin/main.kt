@@ -21,16 +21,18 @@ fun main() {
     cvs.height = height * scale
     world.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
     world.registerSystem(CircleRenderSystem(cvs.width, cvs.height, ctx, scale))
-    for (i in (0..4000)) {
-        val e = world.createEntity()
-        val pos = world.addComponent(e, Position::class)
-        val circle = world.addComponent(e, Circle::class)
-        val vel = world.addComponent(e, Velocity::class)
-        pos.v.x = Random.nextDouble(width.toDouble())
-        pos.v.y = Random.nextDouble(height.toDouble())
-        circle.radius = Random.nextDouble(40.0)
-        vel.v.x = Random.nextDouble(5.0)
-        vel.v.y = Random.nextDouble(5.0)
+    for (i in (0..40)) {
+        world.createCircle(
+            position = Vector(
+                width.toDouble() / 2,
+                height.toDouble() / 2
+            ),
+            radius = Random.nextDouble(1.0, 40.0),
+            velocity = Vector(
+                Random.nextDouble(-5.0, 5.0),
+                Random.nextDouble(-5.0, 5.0)
+            )
+        )
     }
 }
 
