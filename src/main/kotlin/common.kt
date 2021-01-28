@@ -26,12 +26,12 @@ data class Vector(var x: Double, var y: Double) {
     }
 
     fun rot(r: Double): Vector {
-        x *= sin(r)
-        y *= cos(r)
+        x = x * cos(r) - y * sin(r)
+        y = x * sin(r) + y * cos(r)
         return this
     }
 
-    fun lengthSq(): Double = x*x + y*y
+    fun lengthSq(): Double = x * x + y * y
 }
 
 data class Position(val v: Vector) : Component
