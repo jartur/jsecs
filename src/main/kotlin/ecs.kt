@@ -36,13 +36,15 @@ abstract class AbstractSystem<Ctx> : System<Ctx> {
     }
 }
 
-abstract class ComponentSystem<Ctx>(private val requiredComponents: Set<KClass<out Component>>) : AbstractSystem<Ctx>() {
+abstract class ComponentSystem<Ctx>(private val requiredComponents: Set<KClass<out Component>>) :
+    AbstractSystem<Ctx>() {
     override fun shouldRun(entity: Int): Boolean {
         return super.shouldRun(entity) && requiredComponents.all { world.component(entity, it) != null }
     }
 }
 
-abstract class Component1System<T : Component, Ctx>(private val cclass: KClass<T>) : ComponentSystem<Ctx>(setOf(cclass)) {
+abstract class Component1System<T : Component, Ctx>(private val cclass: KClass<T>) :
+    ComponentSystem<Ctx>(setOf(cclass)) {
     abstract fun doProcessEntity(component: T)
 
     override fun doProcessEntity(entity: Int) {
@@ -82,18 +84,6 @@ abstract class Component3System<T1 : Component, T2 : Component, T3 : Component, 
 
 typealias EntityByComponentType = MutableMap<KClass<out Component>, MutableMap<Int, Component?>>
 
-interface EndFrameOp {
-    fun run(entities: MutableList<Int>, components: EntityByComponentType)
-}
-
-data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, Component>) : EndFrameOp {
-    override fun run(entities: MutableList<Int>, components: EntityByComponentType) {
-        entities.add(id)
-        cs.forEach { c ->
-            components[c.key]!![id] = c.value
-        }
-    }
-}
 
 class World<out Ctx>(
     val registeredComponents: RegisteredComponents,
@@ -103,9 +93,13 @@ class World<out Ctx>(
     private var systems = mutableListOf<System<Ctx>>()
     private var entities: MutableList<Int> = mutableListOf()
     private var freeEntities = mutableListOf<Int>()
-    private var pendingOps = mutableMapOf<Int, EndFrameOp>()
+    private var pendingCreations = mutableMapOf<Int, CreateEntity>()
     private var delayed = mutableListOf<() -> Unit>()
     private var maxId = 0
+    private val tagsMap = mutableMapOf<String, Int>()
+
+    val tags: Map<String, Int>
+        get() = tagsMap
 
     fun registerSystem(system: System<Ctx>) {
         system.init(this)
@@ -122,18 +116,26 @@ class World<out Ctx>(
             }
         }
         systems.forEach { it.after() }
-        delayed.forEach { op -> op() }
+        delayed.forEach { it() }
         delayed.clear()
-        pendingOps.values.forEach { op ->
-            op.run(entities, components)
-        }
-        pendingOps.clear()
+        pendingCreations.values.forEach(this::processPendingCreations)
+        pendingCreations.clear()
     }
 
     fun createEntity(): Int {
         val id = if (freeEntities.size > 0) freeEntities.removeAt(0) else maxId++
-        pendingOps[id] = CreateEntity(id, mutableMapOf())
+        pendingCreations[id] = CreateEntity(id, mutableMapOf())
         return id
+    }
+
+    fun deleteEntity(id: Int) {
+        pendingCreations.remove(id)
+        delay {
+            entities.remove(id)
+            components.forEach { cm ->
+                cm.value[id] = null
+            }
+        }
     }
 
     fun <T : Component> addComponent(e: Int, c: KClass<T>): T {
@@ -141,11 +143,8 @@ class World<out Ctx>(
             components[c] = mutableMapOf()
         }
         val component = registeredComponents.components[c]!!().unsafeCast<T>()
-        if (pendingOps.containsKey(e)) {
-            when (val op = pendingOps[e]) {
-                is CreateEntity -> op.cs[c] = component
-                else -> console.log("Operation not supported: $op")
-            }
+        if (pendingCreations.containsKey(e)) {
+            pendingCreations[e]!!.cs[c] = component
         } else {
             components[c]!![e] = component
         }
@@ -156,11 +155,8 @@ class World<out Ctx>(
         if (!components.containsKey(c)) {
             throw IllegalStateException("Component type is wrong $c")
         }
-        if (pendingOps.containsKey(e)) {
-            when (val op = pendingOps[e]) {
-                is CreateEntity -> op.cs.remove(c)
-                else -> console.log("Operation not supported: $op")
-            }
+        if (pendingCreations.containsKey(e)) {
+            pendingCreations[e]!!.cs.remove(c)
         } else {
             components[c]!!.remove(e)
         }
@@ -180,6 +176,27 @@ class World<out Ctx>(
     fun delay(op: () -> Unit) {
         delayed.add(op)
     }
+
+    fun tag(tag: String, id: Int) {
+        delay {
+            tagsMap[tag] = id
+        }
+    }
+
+    fun untag(tag: String) {
+        delay {
+            tagsMap -= tag
+        }
+    }
+
+    private fun processPendingCreations(op: CreateEntity) {
+        entities.add(op.id)
+        op.cs.forEach { c ->
+            components[c.key]!![op.id] = c.value
+        }
+    }
+
+    data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, Component>)
 }
 
 open class EmptyContext()
