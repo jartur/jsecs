@@ -45,10 +45,10 @@ abstract class ComponentSystem<Ctx>(private val requiredComponents: Set<KClass<o
 
 abstract class Component1System<T : Component, Ctx>(private val cclass: KClass<T>) :
     ComponentSystem<Ctx>(setOf(cclass)) {
-    abstract fun doProcessEntity(component: T)
+    abstract fun doProcessEntity(entity: Int, component: T)
 
     override fun doProcessEntity(entity: Int) {
-        doProcessEntity(world.component(entity, cclass)!!)
+        doProcessEntity(entity, world.component(entity, cclass)!!)
     }
 }
 
@@ -56,10 +56,10 @@ abstract class Component2System<T1 : Component, T2 : Component, Ctx>(
     private val cclass1: KClass<T1>,
     private val cclass2: KClass<T2>
 ) : ComponentSystem<Ctx>(setOf(cclass1, cclass2)) {
-    abstract fun doProcessEntity(component1: T1, component2: T2)
+    abstract fun doProcessEntity(entity: Int, component1: T1, component2: T2)
 
     override fun doProcessEntity(entity: Int) {
-        doProcessEntity(
+        doProcessEntity(entity,
             world.component(entity, cclass1)!!,
             world.component(entity, cclass2)!!
         )
@@ -71,10 +71,10 @@ abstract class Component3System<T1 : Component, T2 : Component, T3 : Component, 
     private val cclass2: KClass<T2>,
     private val cclass3: KClass<T3>
 ) : ComponentSystem<Ctx>(setOf(cclass1, cclass2, cclass3)) {
-    abstract fun doProcessEntity(component1: T1, component2: T2, component3: T3)
+    abstract fun doProcessEntity(entity: Int, component1: T1, component2: T2, component3: T3)
 
     override fun doProcessEntity(entity: Int) {
-        doProcessEntity(
+        doProcessEntity(entity,
             world.component(entity, cclass1)!!,
             world.component(entity, cclass2)!!,
             world.component(entity, cclass3)!!
@@ -88,10 +88,10 @@ abstract class Component4System<T1 : Component, T2 : Component, T3 : Component, 
     private val cclass3: KClass<T3>,
     private val cclass4: KClass<T4>
 ) : ComponentSystem<Ctx>(setOf(cclass1, cclass2, cclass3, cclass4)) {
-    abstract fun doProcessEntity(component1: T1, component2: T2, component3: T3, component4: T4)
+    abstract fun doProcessEntity(entity: Int, component1: T1, component2: T2, component3: T3, component4: T4)
 
     override fun doProcessEntity(entity: Int) {
-        doProcessEntity(
+        doProcessEntity(entity,
             world.component(entity, cclass1)!!,
             world.component(entity, cclass2)!!,
             world.component(entity, cclass3)!!,

@@ -2,6 +2,7 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.events.MouseEvent
 import kotlin.random.Random
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -13,7 +14,21 @@ val height = 600
 
 val world = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
 
+fun getMousePos(canvas: HTMLCanvasElement, e: MouseEvent): Vector {
+    val r = canvas.getBoundingClientRect()
+    return Vector(
+        e.clientX.toDouble() - r.left,
+        e.clientY.toDouble() - r.top
+    )
+}
+
+var lastMousePos: Vector = Vector((width/2).toDouble(), (height/2).toDouble())
+
 fun main() {
+    cvs.onmousemove = { e ->
+        lastMousePos = getMousePos(cvs, e)
+        false
+    }
     val scale = 1
     cvs.width = width * scale
     cvs.height = height * scale
@@ -21,6 +36,7 @@ fun main() {
     world.registerSystem(RotatingSystem())
     world.registerSystem(CircleRenderSystem(ctx))
     world.registerSystem(DebugRenderSystem(ctx))
+    world.registerSystem(InputSystem { lastMousePos })
     for (i in (0..40)) {
         world.createCircle(
             position = Vector(
@@ -34,6 +50,10 @@ fun main() {
             )
         )
     }
+    val player = world.createCircle(position = lastMousePos,
+        radius = 100.0,
+        velocity = Vector.zero())
+    world.tag("player", player)
 }
 
 @Suppress("unused")
@@ -44,5 +64,5 @@ fun run() {
             world.tick()
         }
         console.log(t.inMilliseconds)
-    }, 13)
+    }, 20)
 }

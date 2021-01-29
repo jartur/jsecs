@@ -8,11 +8,12 @@ data class Vector(var x: Double, var y: Double) {
         fun one() = Vector(1.0, 1.0)
     }
 
-    fun add(v: Vector): Vector {
+    operator fun plusAssign(v: Vector) {
         x += v.x
         y += v.y
-        return this
     }
+
+    operator fun plus(v: Vector) = Vector(x + v.x, y + v.y)
 
     fun set(vector: Vector): Vector {
         x = vector.x
@@ -20,11 +21,12 @@ data class Vector(var x: Double, var y: Double) {
         return this
     }
 
-    fun scale(s: Double): Vector {
+    operator fun timesAssign(s: Double) {
         x *= s
         y *= s
-        return this
     }
+
+    operator fun times(s: Double): Vector = Vector(x * s, y * s)
 
     fun rot(r: Double): Vector {
         x = x * cos(r) - y * sin(r)
@@ -36,12 +38,26 @@ data class Vector(var x: Double, var y: Double) {
 
     fun length(): Double = sqrt(lengthSq())
 
-    fun normalize(): Vector {
+    fun normalize() {
         length().let {
             x /= it
             y /= it
         }
-        return this
+    }
+
+    fun normalized(): Vector = copy().also { it.normalize() }
+
+    operator fun minusAssign(v: Vector) {
+        x -= v.x
+        y -= v.y
+    }
+
+    operator fun minus(v: Vector): Vector = Vector(x - v.x, y - v.y)
+    operator fun compareTo(d: Double): Int = lengthSq().compareTo(d * d)
+    operator fun div(d: Double): Vector = Vector(x / d, y / d)
+    operator fun divAssign(d: Double) {
+        x /= d
+        y /= d
     }
 }
 
