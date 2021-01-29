@@ -23,13 +23,9 @@ fun getMousePos(canvas: HTMLCanvasElement, e: MouseEvent): Vector {
     )
 }
 
-var lastMousePos: Vector = Vector((width/2).toDouble(), (height/2).toDouble())
+var lastMousePos: Vector = Vector((width / 2).toDouble(), (height / 2).toDouble())
 
 fun main() {
-    cvs.onmousemove = { e ->
-        lastMousePos = getMousePos(cvs, e)
-        false
-    }
     val scale = 1
     cvs.width = width * scale
     cvs.height = height * scale
@@ -37,13 +33,22 @@ fun main() {
 }
 
 private fun initFieldWorld() {
-    fieldWorld.registerSystem(FieldInputSystem{ lastMousePos })
+    val fieldInputSystem = FieldInputSystem()
+    cvs.onmousedown = {
+        fieldInputSystem.clicked = true
+        false
+    }
+    cvs.onmousemove = { e ->
+        fieldInputSystem.mousePos = getMousePos(cvs, e)
+        false
+    }
+    fieldWorld.registerSystem(fieldInputSystem)
     fieldWorld.registerSystem(FieldSystem())
     fieldWorld.registerSystem(FieldRenderSystem(ctx))
-    val vpd = 50
-    for(x in (0..vpd)) {
+    val vpd = 30
+    for (x in (0..vpd)) {
         for (y in (0..vpd)) {
-            fieldWorld.createVector(Vector((width / vpd * x).toDouble(), (height/vpd * y).toDouble()))
+            fieldWorld.createVector(Vector((width / vpd * x).toDouble(), (height / vpd * y).toDouble()))
         }
     }
     fieldWorld.createVector(Vector.zero()).also { fieldWorld.tag("player", it) }

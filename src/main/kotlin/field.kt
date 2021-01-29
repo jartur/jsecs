@@ -11,10 +11,10 @@ class FieldSystem(
 ) : Component1System<Position, EmptyContext>(Position::class) {
     override fun doProcessEntity(entity: Int, position: Position) {
         val player = world.tags["player"]
-        if (player != null) {
+        if (player != null && player != entity) {
             val playerPos = world.component(player, Position::class)!!
             val dv = playerPos.v - position.v
-            position.r.set(dv.normalized() * sin(exp(dv.length() / 100)) * 10.0)
+            position.r.set(dv.normalized() * sin(exp(dv.length() / 100)) * 10.0 * playerPos.r.length())
         }
     }
 }
@@ -48,15 +48,24 @@ class FieldRenderSystem(
     }
 }
 
-class FieldInputSystem(val mousePosProvider: () -> Vector) : AbstractSystem<EmptyContext>() {
+class FieldInputSystem : AbstractSystem<EmptyContext>() {
+    var clicked = false
+    var mousePos: Vector = Vector.zero()
+
     override fun doProcessEntity(entity: Int) {
     }
 
     override fun after() {
         world.tags["player"]?.let { e ->
             world.component(e, Position::class)?.let { position ->
-                val mp = mousePosProvider()
-                position.v.set(mp)
+                position.v.set(mousePos)
+                if(clicked) {
+                    position.r *= 2.0
+                    if(position.r.length() > 100) {
+                        position.r.normalize()
+                    }
+                    clicked = false
+                }
             }
         }
     }
