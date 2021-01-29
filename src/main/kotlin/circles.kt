@@ -64,9 +64,9 @@ class MovingSystem(
 }
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
-class RotatingSystem(): Component1System<Position, EmptyContext>(Position::class) {
-    override fun doProcessEntity(position: Position) {
-        position.r.rot(0.1)
+class RotatingSystem() : Component2System<Position, Circle, EmptyContext>(Position::class, Circle::class) {
+    override fun doProcessEntity(position: Position, circle: Circle) {
+        position.r.rot(1.0 / circle.radius)
     }
 }
 
@@ -99,7 +99,7 @@ class DebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
         ctx.translate(position.v.x, position.v.y)
         ctx.beginPath()
         ctx.moveTo(0.0, 0.0)
-        velocity.v.copy().scale(circle.radius).let { ctx.lineTo(it.x, it.y) }
+        velocity.v.copy().scale(10.0).let { ctx.lineTo(it.x, it.y) }
         ctx.stroke()
         ctx.beginPath()
         ctx.moveTo(0.0, 0.0)
