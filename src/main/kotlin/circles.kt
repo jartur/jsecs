@@ -10,13 +10,6 @@ class CirclesContext(
     dimContext: DimContext
 ) : DimContext(dimContext.width, dimContext.height, dimContext.scale)
 
-open class DimContext(
-    val width: Double,
-    val height: Double,
-    val scale: Double = 1.0
-) : EmptyContext()
-
-
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class MovingSystem(
     private val width: Double,

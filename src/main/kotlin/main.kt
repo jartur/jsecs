@@ -12,7 +12,8 @@ val ctx = cvs.getContext("2d")!! as CanvasRenderingContext2D
 val width = 700
 val height = 600
 
-val world = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
+val circlesWorld = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
+val fieldWorld = fieldWorld(DimContext(width.toDouble(), height.toDouble()))
 
 fun getMousePos(canvas: HTMLCanvasElement, e: MouseEvent): Vector {
     val r = canvas.getBoundingClientRect()
@@ -32,13 +33,30 @@ fun main() {
     val scale = 1
     cvs.width = width * scale
     cvs.height = height * scale
-    world.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
-    world.registerSystem(RotatingSystem())
-    world.registerSystem(CircleRenderSystem(ctx))
-    world.registerSystem(DebugRenderSystem(ctx))
-    world.registerSystem(InputSystem { lastMousePos })
+    initFieldWorld()
+}
+
+private fun initFieldWorld() {
+    fieldWorld.registerSystem(FieldInputSystem{ lastMousePos })
+    fieldWorld.registerSystem(FieldSystem())
+    fieldWorld.registerSystem(FieldRenderSystem(ctx))
+    val vpd = 50
+    for(x in (0..vpd)) {
+        for (y in (0..vpd)) {
+            fieldWorld.createVector(Vector((width / vpd * x).toDouble(), (height/vpd * y).toDouble()))
+        }
+    }
+    fieldWorld.createVector(Vector.zero()).also { fieldWorld.tag("player", it) }
+}
+
+private fun initCirclesWorld() {
+    circlesWorld.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
+    circlesWorld.registerSystem(RotatingSystem())
+    circlesWorld.registerSystem(CircleRenderSystem(ctx))
+    circlesWorld.registerSystem(DebugRenderSystem(ctx))
+    circlesWorld.registerSystem(InputSystem { lastMousePos })
     for (i in (0..40)) {
-        world.createCircle(
+        circlesWorld.createCircle(
             position = Vector(
                 width.toDouble() / 8 * (i % 8),
                 height.toDouble() / 5 * (i / 5)
@@ -50,10 +68,12 @@ fun main() {
             )
         )
     }
-    val player = world.createCircle(position = lastMousePos,
+    val player = circlesWorld.createCircle(
+        position = lastMousePos,
         radius = 60.0,
-        velocity = Vector.zero())
-    world.tag("player", player)
+        velocity = Vector.zero()
+    )
+    circlesWorld.tag("player", player)
 }
 
 @Suppress("unused")
@@ -61,7 +81,7 @@ fun main() {
 fun run() {
     window.setInterval({
         val t = measureTime {
-            world.tick()
+            fieldWorld.tick()
         }
         console.log(t.inMilliseconds)
     }, 20)
