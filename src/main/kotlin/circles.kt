@@ -55,6 +55,7 @@ class MovingSystem(
                     .rot(Random.nextDouble(PI * 2))
             )
         }
+        velocity.v.add(position.r.copy().normalize().scale(0.01))
         // Delay the position update so that other circles see a static picture of the world
         // during a frame.
         world.delay {
@@ -66,7 +67,7 @@ class MovingSystem(
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class RotatingSystem : Component2System<Position, Circle, EmptyContext>(Position::class, Circle::class) {
     override fun doProcessEntity(position: Position, circle: Circle) {
-        position.r.rot(1.0 / circle.radius)
+        position.r.rot(0.1 / circle.radius)
     }
 }
 
@@ -97,17 +98,29 @@ class DebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
         val originalStroke = ctx.strokeStyle
         ctx.strokeStyle = "#ff2020"
         ctx.translate(position.v.x, position.v.y)
-        ctx.beginPath()
-        ctx.moveTo(0.0, 0.0)
-        velocity.v.copy().scale(10.0).let { ctx.lineTo(it.x, it.y) }
-        ctx.stroke()
+        drawVelocity(velocity)
+        drawRotation(position, circle)
+        ctx.resetTransform()
+        ctx.strokeStyle = originalStroke
+    }
+
+    override fun after() {
+        ctx.strokeText("ENTITIES: ${world.entityCount}", 10.0, 10.0)
+    }
+
+    private fun drawRotation(position: Position, circle: Circle) {
         ctx.beginPath()
         ctx.moveTo(0.0, 0.0)
         position.r.copy().normalize().scale(circle.radius).let { ctx.lineTo(it.x, it.y) }
         ctx.strokeStyle = "#20ff20"
         ctx.stroke()
-        ctx.resetTransform()
-        ctx.strokeStyle = originalStroke
+    }
+
+    private fun drawVelocity(velocity: Velocity) {
+        ctx.beginPath()
+        ctx.moveTo(0.0, 0.0)
+        velocity.v.copy().scale(10.0).let { ctx.lineTo(it.x, it.y) }
+        ctx.stroke()
     }
 }
 
@@ -126,6 +139,7 @@ fun World<EmptyContext>.createCircle(position: Vector, radius: Double, velocity:
     val circle = addComponent(e, Circle::class)
     val vel = addComponent(e, Velocity::class)
     pos.v.set(position)
+    pos.r.set(velocity.copy())
     circle.radius = radius
     vel.v.set(velocity)
 }

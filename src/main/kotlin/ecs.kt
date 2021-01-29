@@ -82,6 +82,24 @@ abstract class Component3System<T1 : Component, T2 : Component, T3 : Component, 
     }
 }
 
+abstract class Component4System<T1 : Component, T2 : Component, T3 : Component, T4 : Component, Ctx>(
+    private val cclass1: KClass<T1>,
+    private val cclass2: KClass<T2>,
+    private val cclass3: KClass<T3>,
+    private val cclass4: KClass<T4>
+) : ComponentSystem<Ctx>(setOf(cclass1, cclass2, cclass3, cclass4)) {
+    abstract fun doProcessEntity(component1: T1, component2: T2, component3: T3, component4: T4)
+
+    override fun doProcessEntity(entity: Int) {
+        doProcessEntity(
+            world.component(entity, cclass1)!!,
+            world.component(entity, cclass2)!!,
+            world.component(entity, cclass3)!!,
+            world.component(entity, cclass4)!!
+        )
+    }
+}
+
 typealias EntityByComponentType = MutableMap<KClass<out Component>, MutableMap<Int, Component?>>
 
 
@@ -100,6 +118,9 @@ class World<out Ctx>(
 
     val tags: Map<String, Int>
         get() = tagsMap
+
+    val entityCount: Int
+        get() = entities.size
 
     fun registerSystem(system: System<Ctx>) {
         system.init(this)
