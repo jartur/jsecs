@@ -45,8 +45,8 @@ fun main() {
             ),
             radius = Random.nextDouble(1.0, 40.0),
             velocity = Vector(
-                Random.nextDouble(-5.0, 5.0),
-                Random.nextDouble(-5.0, 5.0)
+                Random.nextDouble(-1.0, 1.0),
+                Random.nextDouble(-1.0, 1.0)
             )
         )
     }

@@ -1,7 +1,6 @@
 import org.w3c.dom.CanvasRenderingContext2D
-import kotlin.math.PI
-import kotlin.math.max
-import kotlin.math.sqrt
+import kotlin.math.*
+import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.reflect.KClass
 
@@ -63,10 +62,11 @@ class MovingSystem(
             world.component(it, Position::class)?.let { playerPos ->
                 val runV = position.v - playerPos.v
                 if (runV > 0.0) {
-                    val ds = max(1.0, runV.length() - world.component(it, Circle::class)!!.radius - circle.radius)
+                    val ds = runV.length() - world.component(it, Circle::class)!!.radius - circle.radius
                     runV.normalize()
-                    runV *= (2.0 / ds)
-                    velocity.v += runV
+                    runV *= 2 * cos(ds/50.0)
+                    position.r += runV
+                    position.r.normalize()
                 }
             }
         }
@@ -81,7 +81,7 @@ class MovingSystem(
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class RotatingSystem : Component2System<Position, Circle, EmptyContext>(Position::class, Circle::class) {
     override fun doProcessEntity(entity: Int, position: Position, circle: Circle) {
-        position.r.rot(0.1 / circle.radius)
+       // position.r.rot(0.1 / circle.radius)
     }
 }
 
