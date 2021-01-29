@@ -6,12 +6,22 @@ import kotlin.reflect.KClass
 
 data class Circle(var radius: Double) : Component
 
+class CirclesContext(
+    val dimContext: DimContext
+) : DimContext(dimContext.width, dimContext.height, dimContext.scale)
+
+open class DimContext(
+    val width: Double,
+    val height: Double,
+    val scale: Double = 1.0
+) : EmptyContext()
+
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class MovingSystem(
     private val width: Double,
     private val height: Double
-) : Component3System<Position, Velocity, Circle>(Position::class, Velocity::class, Circle::class) {
+) : Component3System<Position, Velocity, Circle, EmptyContext>(Position::class, Velocity::class, Circle::class) {
     override fun doProcessEntity(position: Position, velocity: Velocity, circle: Circle) {
         val nextPosition = position.v.copy().add(velocity.v)
         var collision = false
@@ -55,19 +65,15 @@ class MovingSystem(
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class CircleRenderSystem(
-    private val width: Int,
-    private val height: Int,
-    private val ctx: CanvasRenderingContext2D,
-    private val scale: Int = 1
-) : Component2System<Position, Circle>(Position::class, Circle::class) {
-
+    private val ctx: CanvasRenderingContext2D
+) : Component2System<Position, Circle, DimContext>(Position::class, Circle::class) {
     override fun before() {
         ctx.fillStyle = "#ffffff"
-        ctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
+        ctx.fillRect(0.0, 0.0, world.globals.width, world.globals.height)
     }
 
     override fun doProcessEntity(position: Position, circle: Circle) {
-        ctx.scale(scale.toDouble(), scale.toDouble())
+        ctx.scale(world.globals.scale, world.globals.scale)
         ctx.beginPath()
         ctx.ellipse(position.v.x, position.v.y, circle.radius, circle.radius, 0.0, 0.0, 2 * PI)
         ctx.closePath()
@@ -76,16 +82,34 @@ class CircleRenderSystem(
     }
 }
 
-val circlesWorld = World(object : RegisteredComponents {
+@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+class DebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
+    Component3System<Position, Circle, Velocity, DimContext>(Position::class, Circle::class, Velocity::class) {
+    override fun doProcessEntity(position: Position, circle: Circle, velocity: Velocity) {
+        ctx.scale(world.globals.scale, world.globals.scale)
+        val originalStroke = ctx.strokeStyle
+        ctx.strokeStyle = "#ff2020"
+        ctx.translate(position.v.x, position.v.y)
+        ctx.beginPath()
+        ctx.moveTo(0.0, 0.0)
+        val vv = velocity.v.copy().scale(circle.radius)
+        ctx.lineTo(vv.x, vv.y)
+        ctx.stroke()
+        ctx.resetTransform()
+        ctx.strokeStyle = originalStroke
+    }
+}
+
+fun circlesWorld(context: CirclesContext) = World(object : RegisteredComponents {
     override val components: Map<KClass<out Component>, () -> Component>
         get() = mapOf(
             Position::class to { Position(Vector.zero()) },
             Velocity::class to { Velocity(Vector.zero()) },
             Circle::class to { Circle(0.0) }
         )
-})
+}, context)
 
-fun World.createCircle(position: Vector, radius: Double, velocity: Vector) {
+fun World<EmptyContext>.createCircle(position: Vector, radius: Double, velocity: Vector) {
     val e = createEntity()
     val pos = addComponent(e, Position::class)
     val circle = addComponent(e, Circle::class)

@@ -9,7 +9,7 @@ data class Cell(
     var neighbours: MutableList<Int> = mutableListOf()
 ) : Component
 
-class CellularAutomatonSystem : ComponentSystem(setOf(Cell::class)) {
+class CellularAutomatonSystem : ComponentSystem<EmptyContext>(setOf(Cell::class)) {
     override fun doProcessEntity(entity: Int) {
         world.component(entity, Cell::class)!!.let { cell ->
             val updated = cellAliveNextTurn(cell)
@@ -30,7 +30,7 @@ class AutomatonRenderSystem(
     private val height: Int,
     private val ctx: CanvasRenderingContext2D,
     private val scale: Int = 1
-) : AbstractSystem() {
+) : AbstractSystem<EmptyContext>() {
 
     override fun before() {
         ctx.fillStyle = "#ffffff"
@@ -46,9 +46,9 @@ class AutomatonRenderSystem(
     }
 }
 
-val automatonWorld = World(object : RegisteredComponents {
+val automatonWorld = World<EmptyContext>(object : RegisteredComponents {
     override val components: Map<KClass<out Component>, () -> Component>
         get() = mapOf(
             Cell::class to { Cell(0.0) }
         )
-})
+}, EmptyContext())

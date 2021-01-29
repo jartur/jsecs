@@ -2,25 +2,24 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
-import kotlin.math.PI
 import kotlin.random.Random
-import kotlin.reflect.KClass
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
 val cvs = document.getElementById("cvs") as HTMLCanvasElement
 val ctx = cvs.getContext("2d")!! as CanvasRenderingContext2D
+val width = 700
+val height = 600
 
-val world = circlesWorld
+val world = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
 
 fun main() {
     val scale = 1
-    val width = 700
-    val height = 600
     cvs.width = width * scale
     cvs.height = height * scale
     world.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
-    world.registerSystem(CircleRenderSystem(cvs.width, cvs.height, ctx, scale))
+    world.registerSystem(CircleRenderSystem(ctx))
+    world.registerSystem(DebugRenderSystem(ctx))
     for (i in (0..40)) {
         world.createCircle(
             position = Vector(

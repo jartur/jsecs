@@ -6,19 +6,19 @@ interface RegisteredComponents {
     val components: Map<KClass<out Component>, () -> Component>
 }
 
-interface System {
+interface System<in Ctx> {
     var enabled: Boolean
     fun processEntity(entity: Int)
-    fun init(w: World)
+    fun init(w: World<Ctx>)
     fun before() {}
     fun after() {}
 }
 
-abstract class AbstractSystem : System {
+abstract class AbstractSystem<Ctx> : System<Ctx> {
     override var enabled: Boolean = true
-    lateinit var world: World
+    lateinit var world: World<Ctx>
 
-    override fun init(w: World) {
+    override fun init(w: World<Ctx>) {
         world = w
     }
 
@@ -36,13 +36,13 @@ abstract class AbstractSystem : System {
     }
 }
 
-abstract class ComponentSystem(private val requiredComponents: Set<KClass<out Component>>) : AbstractSystem() {
+abstract class ComponentSystem<Ctx>(private val requiredComponents: Set<KClass<out Component>>) : AbstractSystem<Ctx>() {
     override fun shouldRun(entity: Int): Boolean {
         return super.shouldRun(entity) && requiredComponents.all { world.component(entity, it) != null }
     }
 }
 
-abstract class Component1System<T : Component>(private val cclass: KClass<T>) : ComponentSystem(setOf(cclass)) {
+abstract class Component1System<T : Component, Ctx>(private val cclass: KClass<T>) : ComponentSystem<Ctx>(setOf(cclass)) {
     abstract fun doProcessEntity(component: T)
 
     override fun doProcessEntity(entity: Int) {
@@ -50,10 +50,10 @@ abstract class Component1System<T : Component>(private val cclass: KClass<T>) : 
     }
 }
 
-abstract class Component2System<T1 : Component, T2 : Component>(
+abstract class Component2System<T1 : Component, T2 : Component, Ctx>(
     private val cclass1: KClass<T1>,
     private val cclass2: KClass<T2>
-) : ComponentSystem(setOf(cclass1, cclass2)) {
+) : ComponentSystem<Ctx>(setOf(cclass1, cclass2)) {
     abstract fun doProcessEntity(component1: T1, component2: T2)
 
     override fun doProcessEntity(entity: Int) {
@@ -64,11 +64,11 @@ abstract class Component2System<T1 : Component, T2 : Component>(
     }
 }
 
-abstract class Component3System<T1 : Component, T2 : Component, T3: Component>(
+abstract class Component3System<T1 : Component, T2 : Component, T3 : Component, Ctx>(
     private val cclass1: KClass<T1>,
     private val cclass2: KClass<T2>,
     private val cclass3: KClass<T3>
-) : ComponentSystem(setOf(cclass1, cclass2, cclass3)) {
+) : ComponentSystem<Ctx>(setOf(cclass1, cclass2, cclass3)) {
     abstract fun doProcessEntity(component1: T1, component2: T2, component3: T3)
 
     override fun doProcessEntity(entity: Int) {
@@ -95,16 +95,19 @@ data class CreateEntity(val id: Int, var cs: MutableMap<KClass<out Component>, C
     }
 }
 
-class World(val registeredComponents: RegisteredComponents) {
+class World<out Ctx>(
+    val registeredComponents: RegisteredComponents,
+    val globals: Ctx
+) {
     private var components: EntityByComponentType = mutableMapOf()
-    private var systems = mutableListOf<System>()
+    private var systems = mutableListOf<System<Ctx>>()
     private var entities: MutableList<Int> = mutableListOf()
     private var freeEntities = mutableListOf<Int>()
     private var pendingOps = mutableMapOf<Int, EndFrameOp>()
     private var delayed = mutableListOf<() -> Unit>()
     private var maxId = 0
 
-    fun registerSystem(system: System) {
+    fun registerSystem(system: System<Ctx>) {
         system.init(this)
         systems.add(system)
     }
@@ -178,3 +181,5 @@ class World(val registeredComponents: RegisteredComponents) {
         delayed.add(op)
     }
 }
+
+open class EmptyContext()
