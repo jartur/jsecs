@@ -7,7 +7,7 @@ import kotlin.reflect.KClass
 data class Circle(var radius: Double) : Component
 
 class CirclesContext(
-    val dimContext: DimContext
+    dimContext: DimContext
 ) : DimContext(dimContext.width, dimContext.height, dimContext.scale)
 
 open class DimContext(
@@ -64,7 +64,7 @@ class MovingSystem(
 }
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
-class RotatingSystem() : Component2System<Position, Circle, EmptyContext>(Position::class, Circle::class) {
+class RotatingSystem : Component2System<Position, Circle, EmptyContext>(Position::class, Circle::class) {
     override fun doProcessEntity(position: Position, circle: Circle) {
         position.r.rot(1.0 / circle.radius)
     }
