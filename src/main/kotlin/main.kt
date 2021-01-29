@@ -9,8 +9,8 @@ import kotlin.time.measureTime
 
 val cvs = document.getElementById("cvs") as HTMLCanvasElement
 val ctx = cvs.getContext("2d")!! as CanvasRenderingContext2D
-val width = 700
-val height = 600
+const val width = 700
+const val height = 600
 
 val circlesWorld = circlesWorld(CirclesContext(DimContext(width.toDouble(), height.toDouble())))
 val fieldWorld = fieldWorld(DimContext(width.toDouble(), height.toDouble()))
@@ -54,6 +54,7 @@ private fun initFieldWorld() {
     fieldWorld.createVector(Vector.zero()).also { fieldWorld.tag("player", it) }
 }
 
+@Suppress("unused")
 private fun initCirclesWorld() {
     circlesWorld.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
     circlesWorld.registerSystem(RotatingSystem())
