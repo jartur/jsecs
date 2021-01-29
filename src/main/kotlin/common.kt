@@ -1,5 +1,6 @@
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class Vector(var x: Double, var y: Double) {
     companion object {
@@ -32,7 +33,17 @@ data class Vector(var x: Double, var y: Double) {
     }
 
     fun lengthSq(): Double = x * x + y * y
+
+    fun length(): Double = sqrt(lengthSq())
+
+    fun normalize(): Vector {
+        length().let {
+            x /= it
+            y /= it
+        }
+        return this
+    }
 }
 
-data class Position(val v: Vector) : Component
+data class Position(val v: Vector, val r: Vector = Vector(1.0, 0.0)) : Component
 data class Velocity(val v: Vector) : Component

@@ -64,6 +64,13 @@ class MovingSystem(
 }
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+class RotatingSystem(): Component1System<Position, EmptyContext>(Position::class) {
+    override fun doProcessEntity(position: Position) {
+        position.r.rot(0.1)
+    }
+}
+
+@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 class CircleRenderSystem(
     private val ctx: CanvasRenderingContext2D
 ) : Component2System<Position, Circle, DimContext>(Position::class, Circle::class) {
@@ -92,8 +99,12 @@ class DebugRenderSystem(private val ctx: CanvasRenderingContext2D) :
         ctx.translate(position.v.x, position.v.y)
         ctx.beginPath()
         ctx.moveTo(0.0, 0.0)
-        val vv = velocity.v.copy().scale(circle.radius)
-        ctx.lineTo(vv.x, vv.y)
+        velocity.v.copy().scale(circle.radius).let { ctx.lineTo(it.x, it.y) }
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(0.0, 0.0)
+        position.r.copy().normalize().scale(circle.radius).let { ctx.lineTo(it.x, it.y) }
+        ctx.strokeStyle = "#20ff20"
         ctx.stroke()
         ctx.resetTransform()
         ctx.strokeStyle = originalStroke

@@ -18,6 +18,7 @@ fun main() {
     cvs.width = width * scale
     cvs.height = height * scale
     world.registerSystem(MovingSystem(width.toDouble(), height.toDouble()))
+    world.registerSystem(RotatingSystem())
     world.registerSystem(CircleRenderSystem(ctx))
     world.registerSystem(DebugRenderSystem(ctx))
     for (i in (0..40)) {
