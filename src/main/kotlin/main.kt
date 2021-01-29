@@ -40,8 +40,8 @@ fun main() {
     for (i in (0..40)) {
         world.createCircle(
             position = Vector(
-                width.toDouble() / 2,
-                height.toDouble() / 2
+                width.toDouble() / 8 * (i % 8),
+                height.toDouble() / 5 * (i / 5)
             ),
             radius = Random.nextDouble(1.0, 40.0),
             velocity = Vector(
@@ -51,7 +51,7 @@ fun main() {
         )
     }
     val player = world.createCircle(position = lastMousePos,
-        radius = 100.0,
+        radius = 60.0,
         velocity = Vector.zero())
     world.tag("player", player)
 }
